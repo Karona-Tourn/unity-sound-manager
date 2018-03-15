@@ -1,7 +1,9 @@
+using System;
 using UnityEngine;
 
 namespace TK.SoundManagement
 {
+	[Serializable]
 	public class SoundData
 	{
 		public string name;

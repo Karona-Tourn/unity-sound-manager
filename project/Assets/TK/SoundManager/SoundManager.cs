@@ -4,37 +4,33 @@ using System.Collections.Generic;
 
 namespace TK.SoundManagement
 {
-	public partial class SoundManager : MonoBehaviour
+	public class SoundManager : MonoBehaviour
 	{
 		[SerializeField]
-		private List<SoundData> soundList = new List<SoundData> ();
+		private List<SoundData> _soundList = new List<SoundData> ();
 
 		[SerializeField]
-		private List<SoundData> musicList = new List<SoundData> ();
+		private List<SoundData> _musicList = new List<SoundData> ();
 
-		private SoundPlayerGroup soundGroup = null;
-		private SoundPlayerGroup musicGroup = null;
+		private SoundPlayerGroup _soundGroup = null;
+		private SoundPlayerGroup _musicGroup = null;
 
-		private float soundVolume = 0;
-		private float musicVolume = 0;
-		private static SoundManager instance = null;
+		private float _soundVolume = 0f;
+		private float _musicVolume = 0f;
+		static private SoundManager instance = null;
 
-		public static UnityAction<float> onSoundVolumeChanged = null;
-		public static UnityAction<float> onMusicVolumeChanged = null;
+		static public UnityAction<float> onSoundVolumeChanged = null;
+		static public UnityAction<float> onMusicVolumeChanged = null;
 
-		public static SoundManager Instance
+		static public SoundManager Instance
 		{
 			get
 			{
 				if (instance == null)
 				{
 					instance = FindObjectOfType<SoundManager> ();
-					if (instance == null)
-					{
-						GameObject go = new GameObject ("_SoundManager");
-						instance = go.AddComponent<SoundManager> ();
-					}
-					DontDestroyOnLoad (instance.gameObject);
+					if ( instance == null ) new GameObject ("_SoundManager", typeof(SoundManager));
+					else DontDestroyOnLoad ( instance.gameObject );
 				}
 				return instance;
 			}
@@ -42,103 +38,109 @@ namespace TK.SoundManagement
 
 		public float SoundVolume
 		{
-			get { return soundVolume; }
+			get { return _soundVolume; }
 			set
 			{
-				soundVolume = Mathf.Clamp01 (value);
-				soundGroup.Volume = soundVolume;
+				_soundVolume = Mathf.Clamp01 (value);
+				_soundGroup.Volume = _soundVolume;
 				if (onSoundVolumeChanged != null)
 				{
-					onSoundVolumeChanged (soundVolume);
+					onSoundVolumeChanged (_soundVolume);
 				}
 			}
 		}
 
 		public float MusicVolume
 		{
-			get { return musicVolume; }
+			get { return _musicVolume; }
 			set
 			{
-				musicVolume = Mathf.Clamp01 (value);
-				musicGroup.Volume = musicVolume;
+				_musicVolume = Mathf.Clamp01 (value);
+				_musicGroup.Volume = _musicVolume;
 				if (onMusicVolumeChanged != null)
 				{
-					onMusicVolumeChanged (musicVolume);
+					onMusicVolumeChanged (_musicVolume);
 				}
 			}
 		}
 
 		private void Awake ()
 		{
-			soundGroup = new SoundPlayerGroup (transform);
-			musicGroup = new SoundPlayerGroup (transform);
-			MusicVolume = 1f;
-			SoundVolume = 1f;
+			if ( instance == null )
+			{
+				instance = this;
+				DontDestroyOnLoad ( gameObject );
+
+				_soundGroup = new SoundPlayerGroup ( transform );
+				_musicGroup = new SoundPlayerGroup ( transform );
+				MusicVolume = 1f;
+				SoundVolume = 1f;
+			}
+		}
+
+		private void Start ()
+		{
+			if ( !Equals ( instance ) ) Destroy ( gameObject );
 		}
 
 		public void AddSound (string name, AudioClip clip)
 		{
-			if (soundList.Exists (s => s.name.Equals (name)))
-				return;
-			soundList.Add (new SoundData (name, clip));
+			if ( _soundList.Exists ( s => s.name.Equals ( name ) ) ) return;
+			_soundList.Add (new SoundData (name, clip));
 		}
 
 		public void AddMusic (string name, AudioClip clip)
 		{
-			if (musicList.Exists (m => m.name.Equals (name)))
-				return;
-			musicList.Add (new SoundData (name, clip));
+			if ( _musicList.Exists ( m => m.name.Equals ( name ) ) ) return;
+			_musicList.Add (new SoundData (name, clip));
 		}
 
 		public bool IsPlayingMusic (string clipName)
 		{
-			return musicGroup.IsPlaying (clipName);
+			return _musicGroup.IsPlaying (clipName);
 		}
 
 		public SoundPlayer PlaySound (string name)
 		{
-			SoundData data = soundList.Find (s => s.name == name);
-			if (data == null)
-				return null;
-			return soundGroup.Play (data, 0, false, soundVolume);
+			SoundData data = _soundList.Find (s => s.name == name);
+			if ( data == null ) return null;
+			return _soundGroup.Play (data, 0, false, _soundVolume);
 		}
 
 		public SoundPlayer PlayMusic (string name, float fadeTime = 0, bool stopOther = true, bool random = false)
 		{
-			if (musicList.Count == 0)
-				return null;
+			if ( _musicList.Count == 0 ) return null;
+
 			SoundData data = null;
 			if (random)
 			{
-				data = musicList[Random.Range (0, musicList.Count)];
+				data = _musicList[Random.Range (0, _musicList.Count)];
 			}
 			else
 			{
-				data = musicList.Find (s => s.name == name);
-				if (data == null)
-					return null;
+				data = _musicList.Find (s => s.name == name);
+				if ( data == null ) return null;
 			}
 
-			if (stopOther)
-				musicGroup.Stop ();
+			if ( stopOther ) _musicGroup.Stop ();
 
-			return musicGroup.Play (data, fadeTime, true, musicVolume);
+			return _musicGroup.Play (data, fadeTime, true, _musicVolume);
 		}
 
 		public void StopMusic (float fadeTime)
 		{
-			musicGroup.Stop (fadeTime);
+			_musicGroup.Stop (fadeTime);
 		}
 
 		public void StopSound ()
 		{
-			soundGroup.Stop ();
+			_soundGroup.Stop ();
 		}
 
 		private void Update ()
 		{
-			musicGroup.Update ();
-			soundGroup.Update ();
+			_musicGroup.Update ();
+			_soundGroup.Update ();
 		}
 	}
 

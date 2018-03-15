@@ -11,45 +11,45 @@ namespace TK.SoundManagement
 			FadingOut,
 		}
 
-		private AudioSource source = null;
-		private float fadeTime = 0f;
-		private float currFadeTime = 0f;
-		private float fadeDir = 1f;
-		private FadeState state = FadeState.None;
-		private string keyName = "";
+		private AudioSource _source = null;
+		private float _fadeTime = 0f;
+		private float _currFadeTime = 0f;
+		private float _fadeDir = 1f;
+		private FadeState _state = FadeState.None;
+		private string _keyName = "";
 
-		public bool IsFadingIn { get { return state == FadeState.FadingIn; } }
+		public bool IsFadingIn { get { return _state == FadeState.FadingIn; } }
 
-		public bool IsFadingOut { get { return state == FadeState.FadingOut; } }
+		public bool IsFadingOut { get { return _state == FadeState.FadingOut; } }
 
-		public bool IsFading { get { return state != FadeState.None; } }
+		public bool IsFading { get { return _state != FadeState.None; } }
 
-		public string KeyName { get { return keyName; } }
+		public string KeyName { get { return _keyName; } }
 
-		public bool IsPlaying { get { return source.isPlaying; } }
+		public bool IsPlaying { get { return _source.isPlaying; } }
 
 		public void Play (string keyName, AudioClip clip, float fadeTime, float volume, bool loop)
 		{
-			this.keyName = keyName;
-			this.fadeTime = fadeTime;
-			currFadeTime = 0f;
+			_keyName = keyName;
+			_fadeTime = fadeTime;
+			_currFadeTime = 0f;
 
-			source.loop = loop;
-			source.clip = clip;
+			_source.loop = loop;
+			_source.clip = clip;
 
 			if (fadeTime > 0f)
 			{
-				fadeDir = 1f;
-				state = FadeState.FadingIn;
-				source.volume = 0f;
+				_fadeDir = 1f;
+				_state = FadeState.FadingIn;
+				_source.volume = 0f;
 			}
 			else
 			{
-				state = FadeState.None;
-				source.volume = volume;
+				_state = FadeState.None;
+				_source.volume = volume;
 			}
 
-			source.Play ();
+			_source.Play ();
 		}
 
 		public void Stop (float fadeTime = 0f)
@@ -61,22 +61,22 @@ namespace TK.SoundManagement
 
 			if (fadeTime > 0f)
 			{
-				float p = Mathf.Clamp01 (currFadeTime / this.fadeTime);
-				fadeDir = -1f;
-				this.fadeTime = fadeTime;
-				currFadeTime = this.fadeTime * p;
-				state = FadeState.FadingOut;
+				float p = Mathf.Clamp01 (_currFadeTime / this._fadeTime);
+				_fadeDir = -1f;
+				_fadeTime = fadeTime;
+				_currFadeTime = _fadeTime * p;
+				_state = FadeState.FadingOut;
 			}
 			else
 			{
-				source.Stop ();
+				_source.Stop ();
 			}
 		}
 
 		private void Init ()
 		{
-			source = gameObject.AddComponent<AudioSource> ();
-			source.playOnAwake = false;
+			_source = gameObject.AddComponent<AudioSource> ();
+			_source.playOnAwake = false;
 		}
 
 		public void ExecuteUpdate (float volume)
@@ -85,20 +85,18 @@ namespace TK.SoundManagement
 
 			if (IsFading)
 			{
-				currFadeTime += Time.deltaTime * fadeDir;
-				currFadeTime = Mathf.Clamp (currFadeTime, 0f, fadeTime);
-				float percent = (currFadeTime / fadeTime);
+				_currFadeTime += Time.deltaTime * _fadeDir;
+				_currFadeTime = Mathf.Clamp (_currFadeTime, 0f, _fadeTime);
+				float percent = (_currFadeTime / _fadeTime);
 				lastVolume = percent * volume;
 				if (percent <= 0f || percent >= 1f || !IsPlaying)
 				{
-					if (percent <= 0f)
-						source.Stop ();
-					state = FadeState.None;
+					if ( percent <= 0f ) _source.Stop ();
+					_state = FadeState.None;
 				}
 			}
 
-			if (source.volume != lastVolume)
-				source.volume = lastVolume;
+			if ( _source.volume != lastVolume ) _source.volume = lastVolume;
 		}
 
 		public static SoundPlayer Create (Transform parent = null)

@@ -1,84 +1,78 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace TK.SoundManagement
 {
 	public class SoundPlayerGroup
 	{
-		private Transform parent = null;
-		private Queue<SoundPlayer> freePlayers = new Queue<SoundPlayer> ();
-		private List<SoundPlayer> busyPlayers = new List<SoundPlayer> ();
-		private float volume = 0;
+		private Transform _parent = null;
+		private Queue<SoundPlayer> _freePlayers = new Queue<SoundPlayer> ();
+		private List<SoundPlayer> _busyPlayers = new List<SoundPlayer> ();
+		private float _volume = 0;
+		private object _lock = new object();
 
 		public float Volume
 		{
-			get { return volume; }
-			set { volume = Mathf.Clamp01 (value); }
+			get { return _volume; }
+			set { _volume = Mathf.Clamp01 ( value ); }
 		}
 
-		public SoundPlayerGroup (Transform parent)
+		public SoundPlayerGroup ( Transform parent )
 		{
-			this.parent = parent;
+			_parent = parent;
 		}
 
-		public SoundPlayer Play (SoundData data, float fadeTime, bool loop, float volume)
+		public SoundPlayer Play ( SoundData data, float fadeTime, bool loop, float volume )
 		{
 			SoundPlayer player = null;
 
-			lock (freePlayers)
+			lock ( _lock )
 			{
-				if (freePlayers.Count > 0)
+				if ( _freePlayers.Count > 0 )
 				{
-					player = freePlayers.Dequeue ();
-					player.gameObject.SetActive (true);
+					player = _freePlayers.Dequeue ();
+					player.gameObject.SetActive ( true );
 				}
 				else
 				{
-					player = SoundPlayer.Create (parent);
+					player = SoundPlayer.Create ( _parent );
 				}
-			}
 
-			lock (busyPlayers)
-			{
-				player.Play (data.name, data.clip, fadeTime, volume, loop);
-				busyPlayers.Add (player);
+				player.Play ( data.name, data.clip, fadeTime, volume, loop );
+				_busyPlayers.Add ( player );
 			}
 
 			return player;
 		}
 
-		public void Stop (float fadeTime = 0)
+		public void Stop ( float fadeTime = 0 )
 		{
-			for (int i = 0; i < busyPlayers.Count; i++)
+			for ( int i = 0; i < _busyPlayers.Count; i++ )
 			{
-				busyPlayers[i].Stop (fadeTime);
+				_busyPlayers[i].Stop ( fadeTime );
 			}
 		}
 
-		public bool IsPlaying (string name)
+		public bool IsPlaying ( string name )
 		{
-			return busyPlayers.Exists (s => s.KeyName == name && s.IsPlaying);
+			return _busyPlayers.Exists ( s => s.KeyName == name && s.IsPlaying );
 		}
 
 		public void Update ()
 		{
-			lock (busyPlayers)
+			lock ( _lock )
 			{
-				for (int i = busyPlayers.Count - 1; i >= 0; i--)
+				for ( int i = _busyPlayers.Count - 1; i >= 0; i-- )
 				{
-					SoundPlayer player = busyPlayers[i];
-					if (player.IsPlaying == false)
+					SoundPlayer player = _busyPlayers[i];
+					if ( player.IsPlaying == false )
 					{
-						busyPlayers.RemoveAt (i);
-						player.gameObject.SetActive (false);
-						lock (freePlayers)
-						{
-							freePlayers.Enqueue (player);
-						}
+						_busyPlayers.RemoveAt ( i );
+						player.gameObject.SetActive ( false );
+						_freePlayers.Enqueue ( player );
 						continue;
 					}
-					player.ExecuteUpdate (volume);
+					player.ExecuteUpdate ( _volume );
 				}
 			}
 		}
